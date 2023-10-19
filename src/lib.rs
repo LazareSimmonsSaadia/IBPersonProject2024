@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+#![feature(iter_collect_into)]
 #![feature(portable_simd)]
 pub mod algebra;
 mod opencl;
