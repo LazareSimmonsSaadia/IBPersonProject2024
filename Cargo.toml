@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 opencl3 = {version = "0.9.3"}
-
+thiserror = {version = "1.0.50"}
+gcd = {version = "*"}
