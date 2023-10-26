@@ -1,3 +1,4 @@
+#![feature(tuple_trait)]
 #![feature(let_chains)]
 #![feature(iter_collect_into)]
 #![feature(portable_simd)]

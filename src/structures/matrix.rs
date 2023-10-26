@@ -1,91 +1,55 @@
-use opencl3::{context::Context, svm::SvmVec, types::cl_float};
-use std::simd::{prelude::Simd, LaneCount, SupportedLaneCount};
+use super::matrix_simd::SimdExcess;
+use std::{
+    error::Error,
+    ops::Deref,
+    simd::{LaneCount, Simd, SupportedLaneCount},
+};
+use thiserror::Error;
 
-pub enum MatrixNxN<'a, const N: usize>
+pub struct Matrix<const N: usize>
 where
     LaneCount<N>: SupportedLaneCount,
 {
-    SIMD(Vec<Simd<f32, N>>),
-    OpenCL(Vec<SvmVec<'a, cl_float>>),
-    Naive(Vec<Vec<f32>>),
+    pub vector_flat: Vec<Simd<f32, N>>,
+    pub row_size: usize,
+    pub excess: <Simd<f32, N> as SimdExcess>::Excess,
 }
 
-enum MatrixTypes {
-    SIMD = 1,
-    OpenCL = 3,
-    Naive = 2,
+#[derive(Debug, Error)]
+pub enum MatrixCreationError {
+    #[error("Passing a 2D Vector with inconsistent row lengths to Matrix::from() results in failiure because matrices have uniform row length")]
+    InconsistentRowLengthErr,
 }
 
-impl<'a, const N: usize> MatrixNxN<'a, N>
+impl<const N: usize> Matrix<N>
 where
     LaneCount<N>: SupportedLaneCount,
 {
-    pub fn from(
-        input1: &'a [Vec<f32>],
-        input2: &'a [Vec<f32>],
-        opencl_context: Option<&'a Context>,
-    ) -> (MatrixNxN<'a, N>, MatrixNxN<'a, N>) {
-        let backend = input1
-            .iter()
-            .map(|i| {
-                if i.len() & (i.len() - 1) == 0 && i.len() <= 64 {
-                    MatrixTypes::SIMD
-                } else if let None = opencl_context && i.len() >= 100 {
-                    MatrixTypes::OpenCL
-                } else {
-                    MatrixTypes::Naive
-                }
-            })
-            .fold(1, |i, j| (i as i32).max(j as i32))
-            .max(
-                input2
-                    .iter()
-                    .map(|i| {
-                        if (i.len() & (i.len() - 1) == 0 && i.len() <= 64) {
-                            MatrixTypes::SIMD
-                        } else if let None = opencl_context && i.len() >= 100 {
-                            MatrixTypes::OpenCL
-                        } else {
-                            MatrixTypes::Naive
-                        }
-                    })
-                    .fold(1, |i, j| (i as i32).max(j as i32)),
-            );
-        match backend {
-            1 => (MatrixNxN::new_simd(input1), MatrixNxN::new_simd(input2)),
-            2 => (MatrixNxN::new_naive(input1), MatrixNxN::new_naive(input2)),
-            3 => match opencl_context {
-                Some(context) => (
-                    MatrixNxN::new_opencl(input1, context),
-                    MatrixNxN::new_opencl(input2, context),
-                ),
-                None => (MatrixNxN::new_naive(input1), MatrixNxN::new_naive(input2)),
-            },
-            _ => panic!("MatrixNxN::from(): non-type integer passed to backend match\n")
-
+    pub fn from(input: Vec<Vec<f32>>) -> Result<Matrix<N>, MatrixCreationError> {
+        let lengths = input.iter().map(|i| i.len());
+        if lengths.all(|i| i == lengths.nth(0).unwrap()) {
+            let matrix = Matrix::<N> {
+                vector_flat: input.concat(),
+                row_size: lengths.nth(0).unwrap(),
+                excess:  
+            };
+            Ok(matrix)
+        } else {
+            Err(MatrixCreationError::InconsistentRowLengthErr)
         }
     }
 
-    pub fn new_simd(input: &'a [Vec<f32>]) -> MatrixNxN<'a, N> {
-        MatrixNxN::SIMD(
-            input
-                .iter()
-                .map(|i| Simd::from_slice(i.as_slice()))
-                .collect(),
-        )
+    pub fn guarantee(&mut self) -> bool {
+        self.vector_flat
+            .truncate(self.vector_flat.len() - (self.vector_flat.len() % self.row_size));
+        self.vector_flat.len() % self.row_size == 0
     }
 
-    pub fn new_opencl(input: &'a [Vec<f32>], context: &'a Context) -> MatrixNxN<'a, N> {
-        MatrixNxN::OpenCL(input.iter().map(|i| svmalloc(i, context)).collect())
+    pub fn is_square(&self) -> bool {
+        self.row_size * self.row_size == self.vector_flat.len()
     }
 
-    pub fn new_naive(input: &'a [Vec<f32>]) -> MatrixNxN<'a, N> {
-        MatrixNxN::Naive(input.to_vec())
+    pub fn height(&self) -> usize {
+        self.vector_flat.len() / self.row_size
     }
-}
-
-fn svmalloc<'a>(vec: &'a Vec<f32>, context: &'a Context) -> SvmVec<'a, cl_float> {
-    let mut svm = SvmVec::<cl_float>::new(context);
-    svm.clone_from_slice(vec.as_slice());
-    svm
 }
