@@ -1,4 +1,3 @@
-use super::matrix_simd::SimdExcess;
 use std::{
     error::Error,
     ops::Deref,
@@ -6,13 +5,11 @@ use std::{
 };
 use thiserror::Error;
 
-pub struct Matrix<const N: usize>
-where
-    LaneCount<N>: SupportedLaneCount,
-{
-    pub vector_flat: Vec<Simd<f32, N>>,
+use super::matrix_simd::SimdVector;
+
+pub struct Matrix {
+    pub matrix: Vec<SimdVector>,
     pub row_size: usize,
-    pub excess: <Simd<f32, N> as SimdExcess>::Excess,
 }
 
 #[derive(Debug, Error)]
@@ -21,17 +18,14 @@ pub enum MatrixCreationError {
     InconsistentRowLengthErr,
 }
 
-impl<const N: usize> Matrix<N>
-where
-    LaneCount<N>: SupportedLaneCount,
-{
-    pub fn from(input: Vec<Vec<f32>>) -> Result<Matrix<N>, MatrixCreationError> {
-        let lengths = input.iter().map(|i| i.len());
-        if lengths.all(|i| i == lengths.nth(0).unwrap()) {
-            let matrix = Matrix::<N> {
-                vector_flat: input.concat(),
-                row_size: lengths.nth(0).unwrap(),
-                excess:  
+impl Matrix {
+    pub fn from(input: Vec<Vec<f32>>) -> Result<Matrix, MatrixCreationError> {
+        let row = input.get(0).unwrap().len();
+        let mut lengths = input.iter().map(Vec::<f32>::len);
+        if lengths.all(|i| i == row){
+            let matrix = Matrix {
+                matrix: input.iter().map(|i| SimdVector::from_vector(i.to_owned())).collect(),
+                row_size: row,
             };
             Ok(matrix)
         } else {
@@ -40,16 +34,30 @@ where
     }
 
     pub fn guarantee(&mut self) -> bool {
-        self.vector_flat
-            .truncate(self.vector_flat.len() - (self.vector_flat.len() % self.row_size));
-        self.vector_flat.len() % self.row_size == 0
+        self.matrix
+            .iter()
+            .map(|i| i.len() == self.row_size)
+            .fold(true, |i, j| i && j)
     }
 
     pub fn is_square(&self) -> bool {
-        self.row_size * self.row_size == self.vector_flat.len()
+        self.row_size == self.matrix.len()
     }
 
     pub fn height(&self) -> usize {
-        self.vector_flat.len() / self.row_size
+        self.matrix.len()
+    }
+
+    pub fn column(&self, column: usize) -> Option<SimdVector> {
+        let column_slice: Vec<f32> = self
+            .matrix
+            .iter()
+            .filter_map(|i| i.get(column))
+            .collect();
+        if column_slice.is_empty() {
+            None
+        } else {
+            Some(SimdVector::from_vector(column_slice))
+        }
     }
 }

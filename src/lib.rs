@@ -1,3 +1,4 @@
+#![feature(slice_take)]
 #![feature(tuple_trait)]
 #![feature(let_chains)]
 #![feature(iter_collect_into)]
