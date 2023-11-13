@@ -3,6 +3,7 @@ use std::{
     simd::{f32x1, f32x16, f32x2, f32x32, f32x4, f32x64, f32x8, SimdFloat},
 };
 
+#[derive(Debug)]
 pub struct SimdVector {
     size_64: Vec<f32x64>,
     size_32: Option<f32x32>,
@@ -15,7 +16,7 @@ pub struct SimdVector {
 
 impl SimdVector {
     pub fn len(&self) -> usize {
-        self.size_1.map_or(0, |i| 1)
+        self.size_1.map_or(0, |_i| 1)
             + self.size_2.map_or(0, |i| i.lanes())
             + self.size_4.map_or(0, |i| i.lanes())
             + self.size_8.map_or(0, |i| i.lanes())
@@ -38,15 +39,18 @@ impl SimdVector {
     }
 
     fn bitmask(&self) -> usize {
-        self.size_32.map_or(0, |i| 0b100000)
-            | self.size_16.map_or(0, |i| 0b010000)
-            | self.size_8.map_or(0, |i| 0b001000)
-            | self.size_4.map_or(0, |i| 0b000100)
-            | self.size_2.map_or(0, |i| 0b000010)
-            | self.size_1.map_or(0, |i| 0b000001)
+        self.size_32.map_or(0, |_i| 0b100000)
+            | self.size_16.map_or(0, |_i| 0b010000)
+            | self.size_8.map_or(0, |_i| 0b001000)
+            | self.size_4.map_or(0, |_i| 0b000100)
+            | self.size_2.map_or(0, |_i| 0b000010)
+            | self.size_1.map_or(0, |_i| 0b000001)
     }
 
     pub fn get(&self, index: usize) -> Option<f32> {
+        if self.len() == 0 {
+            return None;
+        }
         let bitmask = self.bitmask();
         self.size_64
             .iter()
@@ -58,13 +62,14 @@ impl SimdVector {
             .copied()
             .or_else(|| {
                 let current = index - (64 * self.size_64.len());
-                match (current ^ bitmask).next_power_of_two() >> 1 {
+                let array = (current ^ bitmask).next_power_of_two() >> 1;
+                match array {
                     32 => self.size_32.unwrap().as_array().get(current).copied(),
                     16 => self
                         .size_16
                         .unwrap()
                         .as_array()
-                        .get(current - (bitmask & 32))
+                        .get(current - (current << current.leading_ones()))
                         .copied(),
                     8 => self
                         .size_8
@@ -95,6 +100,63 @@ impl SimdVector {
             })
     }
 
+    pub fn get_unop(&self, index: usize) -> Option<f32> {
+        self.size_64
+            .iter()
+            .map(|i| i.as_array())
+            .flatten()
+            .collect::<Vec<&f32>>()
+            .get(index)
+            .copied()
+            .copied()
+            .or_else(|| {
+                let mut current = index - (64 * self.size_64.len());
+                if (self.size_32.is_some()) {
+                    if (current < 32) {
+                        return self.size_32.unwrap().as_array().get(current).copied();
+                    } else {
+                        current -= 32;
+                    }
+                }
+                if (self.size_16.is_some()) {
+                    if (current < 16) {
+                        return self.size_16.unwrap().as_array().get(current).copied();
+                    } else {
+                        current -= 16;
+                    }
+                }
+                if (self.size_8.is_some()) {
+                    if (current < 8) {
+                        return self.size_8.unwrap().as_array().get(current).copied();
+                    } else {
+                        current -= 8;
+                    }
+                }
+                if (self.size_4.is_some()) {
+                    if (current < 4) {
+                        return self.size_4.unwrap().as_array().get(current).copied();
+                    } else {
+                        current -= 4;
+                    }
+                }
+                if (self.size_2.is_some()) {
+                    if (current < 2) {
+                        return self.size_2.unwrap().as_array().get(current).copied();
+                    } else {
+                        current -= 2;
+                    }
+                }
+                if (self.size_1.is_some()) {
+                    if (current < 1) {
+                        return self.size_1.unwrap().as_array().get(current).copied();
+                    } else {
+                        current -= 1;
+                    }
+                }
+                None
+            })
+    }
+
     pub fn from_vector(vec: Vec<f32>) -> SimdVector {
         let mut remainder = vec.chunks_exact(64).remainder();
         SimdVector {
@@ -103,24 +165,65 @@ impl SimdVector {
                 .map(|i| f32x64::from_slice(i))
                 .collect(),
             size_32: remainder
-                .take(..=32)
+                .take(..32)
                 .map_or(None, |i| Some(f32x32::from_slice(i))),
             size_16: remainder
-                .take(..=16)
+                .take(..16)
                 .map_or(None, |i| Some(f32x16::from_slice(i))),
             size_8: remainder
-                .take(..=8)
+                .take(..8)
                 .map_or(None, |i| Some(f32x8::from_slice(i))),
             size_4: remainder
-                .take(..=4)
+                .take(..4)
                 .map_or(None, |i| Some(f32x4::from_slice(i))),
             size_2: remainder
-                .take(..=2)
+                .take(..2)
                 .map_or(None, |i| Some(f32x2::from_slice(i))),
             size_1: remainder
                 .take_first()
                 .map_or(None, |i| Some(f32x1::from_slice(&[*i]))),
         }
+    }
+
+    pub fn to_vector(&self) -> Vec<f32> {
+        let mut out = self
+            .size_64
+            .iter()
+            .map(|i| i.as_array())
+            .flatten()
+            .copied()
+            .collect::<Vec<f32>>();
+        out.extend_from_slice(
+            self.size_32
+                .map_or(vec![], |i| i.as_array().to_vec())
+                .as_slice(),
+        );
+        out.extend_from_slice(
+            self.size_16
+                .map_or(vec![], |i| i.as_array().to_vec())
+                .as_slice(),
+        );
+        out.extend_from_slice(
+            self.size_8
+                .map_or(vec![], |i| i.as_array().to_vec())
+                .as_slice(),
+        );
+        out.extend_from_slice(
+            self.size_4
+                .map_or(vec![], |i| i.as_array().to_vec())
+                .as_slice(),
+        );
+        out.extend_from_slice(
+            self.size_2
+                .map_or(vec![], |i| i.as_array().to_vec())
+                .as_slice(),
+        );
+        out.extend_from_slice(
+            self.size_1
+                .map_or(vec![], |i| i.as_array().to_vec())
+                .as_slice(),
+        );
+        out
     }
 }
 
