@@ -10,7 +10,7 @@ pub mod structures;
 #[cfg(test)]
 mod tests {
 
-    use crate::structures::{matrix::Matrix, matrix_simd::SimdVector};
+    use crate::structures::{matrix_simd::Matrix, vector_simd::SimdVector};
 
     #[test]
     fn check_create_simd_vector() {
