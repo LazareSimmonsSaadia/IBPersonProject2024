@@ -10,7 +10,7 @@ pub mod structures;
 #[cfg(test)]
 mod tests {
 
-    use crate::structures::{matrix_simd::Matrix, vector_simd::SimdVector};
+    use crate::structures::{matrix_simd::SimdMatrix, vector_simd::SimdVector};
 
     #[test]
     fn check_create_simd_vector() {
@@ -36,8 +36,8 @@ mod tests {
             vec![2.3, 77.3, 0., 4.5],
             vec![88.9, 9.0, 32.1, 0.9],
         ];
-        let matrix_working = Matrix::from(init_working.clone());
-        let matrix_fail = Matrix::from(init_fail.clone());
+        let matrix_working = SimdMatrix::from(init_working.clone());
+        let matrix_fail = SimdMatrix::from(init_fail.clone());
 
         assert!(matrix_fail.is_err());
         assert_eq!(matrix_working.unwrap().to_vector(), init_working);
@@ -53,7 +53,7 @@ mod tests {
             vec![2.3, 77.3, 0., 4.5],
             vec![88.9, 9.0, 32.1, 0.9],
         ];
-        let matrix_working = Matrix::from(init_working.clone());
+        let matrix_working = SimdMatrix::from(init_working.clone());
         let mut init_large: Vec<f32> = vec![];
         init_large.resize(675, 1.1);
         let vec_large = SimdVector::from_vector(init_large.clone());
@@ -70,7 +70,7 @@ mod tests {
             vec![88.9, 9.0, 32.1, 0.9],
             vec![2.2, 90.0, 32.2, 0.2],
         ];
-        let mut matrix = Matrix::from(init_working.clone()).unwrap();
+        let mut matrix = SimdMatrix::from(init_working.clone()).unwrap();
         assert!(matrix.is_square());
         assert!(matrix.guarantee());
     }
@@ -173,7 +173,7 @@ mod tests {
             vec![1.2, 22.3, 8.9],
         ];
         let col = SimdVector::from_vector(vec![4.3, 4.6, 22.3]);
-        let matrix = Matrix::from(init);
+        let matrix = SimdMatrix::from(init);
         assert_eq!(
             col.to_vector(),
             matrix.unwrap().column(1).unwrap().to_vector()
