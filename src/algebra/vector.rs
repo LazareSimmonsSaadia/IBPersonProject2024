@@ -1,8 +1,11 @@
-use std::ops::{Add};
+use std::ops::Add;
 
 use num::Float;
 
-pub trait Vector<Scalar: Float = f32> where Self: Sized + Clone{
+pub trait Vector<Scalar: Float = f32>
+where
+    Self: Sized + Clone,
+{
     fn scale(self, scalar: Scalar) -> Self;
     fn add(self, rhs: Self) -> Self;
     fn elem_mul(self, rhs: Self) -> Self;
@@ -20,15 +23,15 @@ pub trait Vector<Scalar: Float = f32> where Self: Sized + Clone{
 
 pub trait Matrix<Scalar: Float = f32>: Sized {
     type Line: Vector<Scalar>;
-    type LineIter: Iterator<Item = Self::Line>;
+    type LineIter<'a>: Iterator<Item = Self::Line> where Self: 'a;
     fn from_vectors(input: Vec<Self::Line>) -> Option<Self>;
 
     fn dimensions(&self) -> (usize, usize);
-    fn row(&self, index: usize) -> Self::Line;
-    fn column(&self, index: usize) -> Self::Line;
+    fn row(&self, index: usize) -> Option<Self::Line>;
+    fn column(&self, index: usize) -> Option<Self::Line>;
 
-    fn row_iter(&self) -> Self::LineIter;
-    fn col_iter(&self) -> Self::LineIter;
+    fn row_iter<'a>(&'a self) -> Self::LineIter<'a>;
+    fn col_iter<'a>(&'a self) -> Self::LineIter<'a>;
 
     fn scale(&self, rhs: Scalar) -> Self {
         Self::from_vectors(self.row_iter().map(|i| i.scale(rhs.clone())).collect()).unwrap()
@@ -55,5 +58,4 @@ pub trait Matrix<Scalar: Float = f32>: Sized {
                 .collect(),
         )
     }
-    }
-
+}

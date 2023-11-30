@@ -50,67 +50,84 @@ impl SimdVector {
                 .reduce_sum()
     }
 
-    fn bitmask(&self) -> usize {
-        self.size_32.map_or(0, |_i| 0b100000)
-            | self.size_16.map_or(0, |_i| 0b010000)
-            | self.size_8.map_or(0, |_i| 0b001000)
-            | self.size_4.map_or(0, |_i| 0b000100)
-            | self.size_2.map_or(0, |_i| 0b000010)
-            | self.size_1.map_or(0, |_i| 0b000001)
+    pub fn scale(self, rhs: f32) -> SimdVector {
+        SimdVector {
+            size_64: self
+                .size_64
+                .iter()
+                .map(|i| i * f32x64::splat(rhs))
+                .collect(),
+            size_32: self.size_32.map(|i| i * f32x32::splat(rhs)),
+            size_16: self.size_16.map(|i| i * f32x16::splat(rhs)),
+            size_8: self.size_8.map(|i| i * f32x8::splat(rhs)),
+            size_4: self.size_4.map(|i| i * f32x4::splat(rhs)),
+            size_2: self.size_2.map(|i| i * f32x2::splat(rhs)),
+            size_1: self.size_1.map(|i| i * f32x1::splat(rhs)),
+        }
     }
 
-    fn get_broken(&self, index: usize) -> Option<f32> {
-        if self.len() == 0 {
-            return None;
-        }
-        let bitmask = self.bitmask();
-        self.size_64
-            .iter()
-            .map(|i| i.as_array())
-            .flatten()
-            .collect::<Vec<&f32>>()
-            .get(index)
-            .copied()
-            .copied()
-            .or_else(|| {
-                let current = index - (64 * self.size_64.len());
-                let array = (current ^ bitmask).next_power_of_two() >> 1;
-                match array {
-                    32 => self.size_32.unwrap().as_array().get(current).copied(),
-                    16 => self
-                        .size_16
-                        .unwrap()
-                        .as_array()
-                        .get(current - (current << current.leading_ones()))
-                        .copied(),
-                    8 => self
-                        .size_8
-                        .unwrap()
-                        .as_array()
-                        .get(current - (bitmask & 0b110000))
-                        .copied(),
-                    4 => self
-                        .size_4
-                        .unwrap()
-                        .as_array()
-                        .get(current - (bitmask & 0b111000))
-                        .copied(),
-                    2 => self
-                        .size_2
-                        .unwrap()
-                        .as_array()
-                        .get(current - (bitmask & 0b111100))
-                        .copied(),
-                    1 => self
-                        .size_1
-                        .unwrap()
-                        .as_array()
-                        .get(current - (bitmask & 0b111110))
-                        .copied(),
-                    _ => None,
-                }
-            })
-    }
+    //TODO: fix faster get function
+    // fn bitmask(&self) -> usize {
+    //     self.size_32.map_or(0, |_i| 0b100000)
+    //         | self.size_16.map_or(0, |_i| 0b010000)
+    //         | self.size_8.map_or(0, |_i| 0b001000)
+    //         | self.size_4.map_or(0, |_i| 0b000100)
+    //         | self.size_2.map_or(0, |_i| 0b000010)
+    //         | self.size_1.map_or(0, |_i| 0b000001)
+    // }
+
+    // fn get_broken(&self, index: usize) -> Option<f32> {
+    //     if self.len() == 0 {
+    //         return None;
+    //     }
+    //     let bitmask = self.bitmask();
+    //     self.size_64
+    //         .iter()
+    //         .map(|i| i.as_array())
+    //         .flatten()
+    //         .collect::<Vec<&f32>>()
+    //         .get(index)
+    //         .copied()
+    //         .copied()
+    //         .or_else(|| {
+    //             let current = index - (64 * self.size_64.len());
+    //             let array = (current ^ bitmask).next_power_of_two() >> 1;
+    //             match array {
+    //                 32 => self.size_32.unwrap().as_array().get(current).copied(),
+    //                 16 => self
+    //                     .size_16
+    //                     .unwrap()
+    //                     .as_array()
+    //                     .get(current - (current << current.leading_ones()))
+    //                     .copied(),
+    //                 8 => self
+    //                     .size_8
+    //                     .unwrap()
+    //                     .as_array()
+    //                     .get(current - (bitmask & 0b110000))
+    //                     .copied(),
+    //                 4 => self
+    //                     .size_4
+    //                     .unwrap()
+    //                     .as_array()
+    //                     .get(current - (bitmask & 0b111000))
+    //                     .copied(),
+    //                 2 => self
+    //                     .size_2
+    //                     .unwrap()
+    //                     .as_array()
+    //                     .get(current - (bitmask & 0b111100))
+    //                     .copied(),
+    //                 1 => self
+    //                     .size_1
+    //                     .unwrap()
+    //                     .as_array()
+    //                     .get(current - (bitmask & 0b111110))
+    //                     .copied(),
+    //                 _ => None,
+    //             }
+    //         })
+    // }
 
     pub fn get(&self, index: usize) -> Option<f32> {
         self.size_64
@@ -162,7 +179,7 @@ impl SimdVector {
                     if current < 1 {
                         return self.size_1.unwrap().as_array().get(current).copied();
                     } else {
-                        current -= 1;
+                        // current -= 1;
                     }
                 }
                 None

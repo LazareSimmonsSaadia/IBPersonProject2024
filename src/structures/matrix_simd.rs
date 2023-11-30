@@ -8,8 +8,9 @@ pub struct SimdMatrix {
     pub row_size: usize,
 }
 
-struct ColumnIter<'a> {
+pub struct SimdLineIter<'a> {
     parent: &'a SimdMatrix,
+    linegetfn: fn(&SimdMatrix, usize) -> Option<SimdVector>,
     count: usize,
 }
 
@@ -75,24 +76,31 @@ impl SimdMatrix {
         }
     }
 
+    pub fn row(&self, row: usize) -> Option<SimdVector> {
+        self.matrix.get(row).cloned()
+    }
+
     pub fn to_vector(&self) -> Vec<Vec<f32>> {
         self.matrix.iter().map(|i| i.to_vector()).collect()
     }
 
-    pub fn iter_column(&self) -> ColumnIter {
-        ColumnIter {
+    pub fn iter_column(&self) -> SimdLineIter {
+        SimdLineIter {
             parent: (&self),
+            linegetfn: SimdMatrix::column,
             count: (0),
         }
     }
+
+    pub fn iter_row(&self) -> SimdLineIter {
+        SimdLineIter { parent: &self, linegetfn: SimdMatrix::row, count: 0 }
+    }
 }
 
-
-
-impl<'a> Iterator for ColumnIter<'a> {
+impl<'a> Iterator for SimdLineIter<'a> {
     type Item = SimdVector;
     fn next(&mut self) -> Option<Self::Item> {
         self.count += 1;
-        self.parent.column(self.count)
+        (self.linegetfn)(self.parent, self.count)
     }
 }
