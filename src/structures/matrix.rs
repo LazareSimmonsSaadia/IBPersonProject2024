@@ -1,11 +1,17 @@
 use thiserror::Error;
 
 use super::matrix_simd::SimdVector;
+use crate::algebra::vector::Matrix;
 
 #[derive(Debug)]
-pub struct Matrix {
+pub struct SimdMatrix {
     pub matrix: Vec<SimdVector>,
     pub row_size: usize,
+}
+
+struct ColumnIter<'a> {
+    parent: &'a SimdMatrix,
+    count: usize,
 }
 
 #[derive(Debug, Error)]
@@ -14,16 +20,30 @@ pub enum MatrixCreationError {
     InconsistentRowLengthErr,
 }
 
-impl Matrix {
-    pub fn from(input: Vec<Vec<f32>>) -> Result<Matrix, MatrixCreationError> {
+impl SimdMatrix {
+    pub fn from(input: Vec<Vec<f32>>) -> Result<SimdMatrix, MatrixCreationError> {
         let row = input.get(0).unwrap().len();
         let mut lengths = input.iter().map(Vec::<f32>::len);
         if lengths.all(|i| i == row) {
-            let matrix = Matrix {
+            let matrix = SimdMatrix {
                 matrix: input
                     .iter()
                     .map(|i| SimdVector::from_vector(i.to_owned()))
                     .collect(),
+                row_size: row,
+            };
+            Ok(matrix)
+        } else {
+            Err(MatrixCreationError::InconsistentRowLengthErr)
+        }
+    }
+
+    pub fn from_simd(input: Vec<SimdVector>) -> Result<SimdMatrix, MatrixCreationError> {
+        let row = input.get(0).unwrap().len();
+        let mut lengths = input.iter().map(SimdVector::len);
+        if lengths.all(|i| i == row) {
+            let matrix = SimdMatrix {
+                matrix: input,
                 row_size: row,
             };
             Ok(matrix)
@@ -58,5 +78,22 @@ impl Matrix {
 
     pub fn to_vector(&self) -> Vec<Vec<f32>> {
         self.matrix.iter().map(|i| i.to_vector()).collect()
+    }
+
+    pub fn iter_column(&self) -> ColumnIter {
+        ColumnIter {
+            parent: (&self),
+            count: (0),
+        }
+    }
+}
+
+
+
+impl<'a> Iterator for ColumnIter<'a> {
+    type Item = SimdVector;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.count += 1;
+        self.parent.column(self.count)
     }
 }

@@ -1,0 +1,70 @@
+use std::ops::{Add, Div, Mul, Sub};
+
+use num::Float;
+
+pub trait Vector<Scalar: Float = f32> {
+    fn scale(self, scalar: Scalar) -> Self;
+    fn add(self, rhs: Self) -> Self;
+    fn elem_mul(self, rhs: Self) -> Self;
+
+    fn partial_sum(&self) -> Scalar;
+
+    fn magnitude(&self) -> Scalar {
+        self.clone().dot(self.clone()).sqrt();
+    }
+
+    fn dot(self, rhs: Self) -> Scalar {
+        self.elem_mul(rhs).partial_sum()
+    }
+}
+
+impl Add for dyn Vector {
+    type Output = dyn Vector;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.add(rhs)
+    }
+}
+
+impl Mul<f32> for dyn Vector {
+    type Output = f32;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs)
+    }
+}
+
+pub trait Matrix<Scalar: Float = f32> {
+    type LineIter: Iterator<Item = dyn Vector>;
+    fn from_vectors(input: Vec<dyn Vector<Scalar>>) -> Option<Self>;
+
+    fn dimensions(&self) -> (usize, usize);
+    fn row(&self, index: usize) -> dyn Vector<Scalar>;
+    fn column(&self, index: usize) -> dyn Vector<Scalar>;
+
+    fn row_iter(&self) -> Self::LineIter;
+    fn col_iter(&self) -> Self::LineIter;
+
+    fn scale(&self, rhs: Scalar) -> Self {
+        Self::from_vectors(self.row_iter().map(|i| i.scale(rhs.clone())).collect()).unwrap()
+    }
+    fn mul(self, rhs: Self) -> Option<Self> {
+        if self.dimensions().1 != rhs.dimensions().0 {
+            None
+        }
+        Some(Self::from_vectors(
+            self.col_iter()
+                .zip(rhs.row_iter())
+                .map(|(i, j)| i * j)
+                .collect(),
+        ))
+    }
+    fn add(self, rhs: Self) -> Option<Self> {
+        if self.dimensions() != rhs.dimensions() {
+            None
+        }
+        Some(Self::from_vectors(
+            self.row_iter().zip(rhs.col_iter()).map(|(i, j)| i + j).collect(),
+        ))
+    }
+}

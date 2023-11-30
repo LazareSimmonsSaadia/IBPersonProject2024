@@ -9,14 +9,8 @@ pub mod structures;
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Add;
 
-    use crate::structures::{
-        matrix::{Matrix, MatrixCreationError},
-        matrix_simd::SimdVector,
-    };
-
-    use super::*;
+    use crate::structures::{matrix::Matrix, matrix_simd::SimdVector};
 
     #[test]
     fn check_create_simd_vector() {
@@ -131,18 +125,58 @@ mod tests {
             let vector = SimdVector::from_vector(init.clone());
             for j in 0..=i {
                 println!("operating on {:?}, element {}", vector, j);
-                if (init.get(j).as_deref() != vector.get(j).as_ref()) {
-                    println!("Failed!!!!");
-                } else {
-                    println!("vector size {}, element {} passed", i, j);
-                }
+                assert_eq!(init.get(j).as_deref(), vector.get(j).as_ref());
+                println!("vector size {}, element {} passed", i, j);
             }
         }
     }
 
     #[test]
-    fn check_simd_ops() {}
+    fn check_simd_ops() {
+        let sum_lhs = SimdVector::from_vector(vec![2.33, 5.66, 9.8]);
+        let sum_rhs = SimdVector::from_vector(vec![4.556, 2.3445, 9.67]);
+        let prod_lhs = SimdVector::from_vector(vec![2.33, 5.66, 9.8]);
+        let prod_rhs = SimdVector::from_vector(vec![4.56, 2.3445, 9.67]);
+        let quot_lhs = SimdVector::from_vector(vec![2.33, 5.66, 9.8]);
+        let quot_rhs = SimdVector::from_vector(vec![4.556, 2.3445, 9.67]);
+        let diff_lhs = SimdVector::from_vector(vec![2.33, 5.66, 9.8]);
+        let diff_rhs = SimdVector::from_vector(vec![4.556, 2.3445, 9.67]);
+
+        let sum = sum_rhs + sum_lhs;
+        let prod = prod_rhs * prod_lhs;
+        let quot = quot_lhs / quot_rhs;
+        let diff = diff_lhs - diff_rhs;
+
+        assert_eq!(
+            sum.to_vector(),
+            vec![2.33 + 4.556, 5.66 + 2.3445, 9.8 + 9.67]
+        );
+        assert_eq!(
+            prod.to_vector(),
+            vec![2.33 * 4.56, 5.66 * 2.3445, 9.8 * 9.67]
+        );
+        assert_eq!(
+            quot.to_vector(),
+            vec![2.33 / 4.556, 5.66 / 2.3445, 9.8 / 9.67]
+        );
+        assert_eq!(
+            diff.to_vector(),
+            vec![2.33 - 4.556, 5.66 - 2.3445, 9.8 - 9.67]
+        );
+    }
 
     #[test]
-    fn check_matrix_column() {}
+    fn check_matrix_column() {
+        let init = vec![
+            vec![0.3, 4.3, 5.6],
+            vec![0.5, 4.6, 8.9],
+            vec![1.2, 22.3, 8.9],
+        ];
+        let col = SimdVector::from_vector(vec![4.3, 4.6, 22.3]);
+        let matrix = Matrix::from(init);
+        assert_eq!(
+            col.to_vector(),
+            matrix.unwrap().column(1).unwrap().to_vector()
+        );
+    }
 }
