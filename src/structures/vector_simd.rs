@@ -3,7 +3,7 @@ use std::{
     simd::{f32x1, f32x16, f32x2, f32x32, f32x4, f32x64, f32x8, SimdFloat},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SimdVector {
     size_64: Vec<f32x64>,
     size_32: Option<f32x32>,
@@ -38,7 +38,8 @@ impl SimdVector {
     }
 
     pub fn sum(&self) -> f32 {
-        self.size_2.map_or(0., |i| i.reduce_sum())
+        self.size_1.map_or(0., |i| i.reduce_sum())
+            + self.size_2.map_or(0., |i| i.reduce_sum())
             + self.size_4.map_or(0., |i| i.reduce_sum())
             + self.size_8.map_or(0., |i| i.reduce_sum())
             + self.size_16.map_or(0., |i| i.reduce_sum())

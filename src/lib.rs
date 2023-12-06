@@ -10,7 +10,11 @@ pub mod structures;
 #[cfg(test)]
 mod tests {
 
-    use crate::structures::{matrix_simd::SimdMatrix, vector_simd::SimdVector};
+
+    use crate::{
+        algebra::vector::{Matrix, Vector},
+        structures::{matrix_simd::SimdMatrix, vector_simd::SimdVector},
+    };
 
     #[test]
     fn check_create_simd_vector() {
@@ -179,4 +183,79 @@ mod tests {
             matrix.unwrap().column(1).unwrap().to_vector()
         );
     }
+    #[test]
+    fn check_simd_matrix_iterators() {
+        let init = vec![
+            vec![0.3, 4.3, 5.6],
+            vec![0.5, 4.6, 8.9],
+            vec![1.2, 22.3, 8.9],
+        ];
+
+        let matrix = SimdMatrix::from(init.clone()).unwrap();
+
+        assert_eq!(
+            init,
+            matrix
+                .row_iter()
+                .map(|i| i.to_vector())
+                .collect::<Vec<Vec<f32>>>()
+        )
+    }
+
+    #[test]
+    fn check_vector_trait_functions() {
+        let left_vector = SimdVector::from_vector(vec![12., 5., 8.]);
+        let right_vector = SimdVector::from_vector(vec![67., 8., 0.]);
+
+        let vector_scaled = SimdVector::from_vector(vec![48., 20., 32.]);
+        let dotprod = 844.;
+
+        assert_eq!(left_vector.clone().scale(4.), vector_scaled);
+        assert_eq!(left_vector.dot(right_vector), dotprod);
+    }
+
+    #[test]
+    fn check_vector_trait_magnitude() {
+        for i in 0..63 {
+            let vector = SimdVector::from_vector(
+                std::iter::repeat_with(|| rand::random()).take(i).collect(),
+            );
+            println!(
+                "input vector is {:?}, magnitude is {}",
+                vector.to_vector(),
+                vector.magnitude()
+            );
+        }
+        // panic!("Hello!!!");
+    }
+
+    #[test]
+    fn check_matrix_trait_products() {
+        let left_matrix =
+            SimdMatrix::from(vec![vec![1., 2., 3.], vec![4., 5., 6.], vec![7., 8., 9.]]).unwrap();
+        let right_matrix =
+            SimdMatrix::from(vec![vec![3., 4.], vec![8., 9.], vec![5., 6.]]).unwrap();
+
+        let output_matrix =
+            Some(SimdMatrix::from(vec![vec![34., 40.], vec![82., 97.], vec![130., 154.]]).unwrap());
+
+        assert_eq!(left_matrix.dimensions(), (3, 3));
+        assert_eq!(right_matrix.dimensions(), (3, 2));
+
+        assert_eq!(
+            left_matrix.mul(right_matrix).map(|i| i
+                .matrix
+                .iter()
+                .map(|j| j.to_vector())
+                .collect::<Vec<Vec<f32>>>()),
+            output_matrix.map(|i| i
+                .matrix
+                .iter()
+                .map(|j| j.to_vector())
+                .collect::<Vec<Vec<f32>>>())
+        );
+    }
+
+    #[test]
+    fn check_matrix_trait_sums() {}
 }

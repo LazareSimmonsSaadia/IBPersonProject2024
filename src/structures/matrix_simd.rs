@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use super::vector_simd::SimdVector;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SimdMatrix {
     pub matrix: Vec<SimdVector>,
     pub row_size: usize,
@@ -93,14 +93,19 @@ impl SimdMatrix {
     }
 
     pub fn iter_row(&self) -> SimdLineIter {
-        SimdLineIter { parent: &self, linegetfn: SimdMatrix::row, count: 0 }
+        SimdLineIter {
+            parent: &self,
+            linegetfn: SimdMatrix::row,
+            count: 0,
+        }
     }
 }
 
 impl<'a> Iterator for SimdLineIter<'a> {
     type Item = SimdVector;
     fn next(&mut self) -> Option<Self::Item> {
+        let val = (self.linegetfn)(self.parent, self.count);
         self.count += 1;
-        (self.linegetfn)(self.parent, self.count)
+        val
     }
 }
