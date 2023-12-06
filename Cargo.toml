@@ -10,3 +10,4 @@ opencl3 = {version = "0.9.3"}
 thiserror = {version = "1.0.50"}
 rand = {version = "*"}
 num = {version = "0.4.1"}
+rayon = {version = "1.7"}

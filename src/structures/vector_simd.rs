@@ -3,6 +3,8 @@ use std::{
     simd::{f32x1, f32x16, f32x2, f32x32, f32x4, f32x64, f32x8, SimdFloat},
 };
 
+use rayon::prelude::*;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SimdVector {
     size_64: Vec<f32x64>,
@@ -55,7 +57,7 @@ impl SimdVector {
         SimdVector {
             size_64: self
                 .size_64
-                .iter()
+                .par_iter()
                 .map(|i| i * f32x64::splat(rhs))
                 .collect(),
             size_32: self.size_32.map(|i| i * f32x32::splat(rhs)),
@@ -132,7 +134,7 @@ impl SimdVector {
 
     pub fn get(&self, index: usize) -> Option<f32> {
         self.size_64
-            .iter()
+            .par_iter()
             .map(|i| i.as_array())
             .flatten()
             .collect::<Vec<&f32>>()
@@ -218,7 +220,7 @@ impl SimdVector {
     pub fn to_vector(&self) -> Vec<f32> {
         let mut out = self
             .size_64
-            .iter()
+            .par_iter()
             .map(|i| i.as_array())
             .flatten()
             .copied()
@@ -264,7 +266,7 @@ impl Add for SimdVector {
         SimdVector {
             size_64: self
                 .size_64
-                .iter()
+                .par_iter()
                 .take(rhs.size_64.len())
                 .enumerate()
                 .map(|(i, j)| j + rhs.size_64.get(i).unwrap())
@@ -298,7 +300,7 @@ impl Mul for SimdVector {
         SimdVector {
             size_64: self
                 .size_64
-                .iter()
+                .par_iter()
                 .take(rhs.size_64.len())
                 .enumerate()
                 .map(|(i, j)| j * rhs.size_64.get(i).unwrap())
@@ -332,7 +334,7 @@ impl Div for SimdVector {
         SimdVector {
             size_64: self
                 .size_64
-                .iter()
+                .par_iter()
                 .take(rhs.size_64.len())
                 .enumerate()
                 .map(|(i, j)| j / rhs.size_64.get(i).unwrap())
@@ -366,7 +368,7 @@ impl Sub for SimdVector {
         SimdVector {
             size_64: self
                 .size_64
-                .iter()
+                .par_iter()
                 .take(rhs.size_64.len())
                 .enumerate()
                 .map(|(i, j)| j - rhs.size_64.get(i).unwrap())
@@ -409,7 +411,7 @@ impl Mul<f32> for SimdVector {
             size_64: self
                 .size_64
                 .as_slice()
-                .iter()
+                .par_iter()
                 .map(|i| i * f32x64::splat(rhs))
                 .collect(),
             size_32: self.size_32.map(|i| i * f32x32::splat(rhs)),
@@ -432,7 +434,7 @@ impl Mul<SimdVector> for f32 {
             size_64: slf
                 .size_64
                 .as_slice()
-                .iter()
+                .par_iter()
                 .map(|i| i * f32x64::splat(rhs))
                 .collect(),
             size_32: slf.size_32.map(|i| i * f32x32::splat(rhs)),
