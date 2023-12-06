@@ -76,7 +76,6 @@ mod tests {
         ];
         let mut matrix = SimdMatrix::from(init_working.clone()).unwrap();
         assert!(matrix.is_square());
-        assert!(matrix.guarantee());
     }
 
     #[test]

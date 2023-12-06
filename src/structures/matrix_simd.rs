@@ -2,6 +2,8 @@ use thiserror::Error;
 
 use super::vector_simd::SimdVector;
 
+use rayon::prelude::*;
+
 #[derive(Debug, PartialEq)]
 pub struct SimdMatrix {
     pub matrix: Vec<SimdVector>,
@@ -23,11 +25,11 @@ pub enum MatrixCreationError {
 impl SimdMatrix {
     pub fn from(input: Vec<Vec<f32>>) -> Result<SimdMatrix, MatrixCreationError> {
         let row = input.get(0).unwrap().len();
-        let mut lengths = input.iter().map(Vec::<f32>::len);
+        let mut lengths = input.par_iter().map(Vec::<f32>::len);
         if lengths.all(|i| i == row) {
             let matrix = SimdMatrix {
                 matrix: input
-                    .iter()
+                    .par_iter()
                     .map(|i| SimdVector::from_vector(i.to_owned()))
                     .collect(),
                 row_size: row,
@@ -40,7 +42,7 @@ impl SimdMatrix {
 
     pub fn from_simd(input: Vec<SimdVector>) -> Result<SimdMatrix, MatrixCreationError> {
         let row = input.get(0).unwrap().len();
-        let mut lengths = input.iter().map(SimdVector::len);
+        let mut lengths = input.par_iter().map(SimdVector::len);
         if lengths.all(|i| i == row) {
             let matrix = SimdMatrix {
                 matrix: input,
@@ -52,12 +54,6 @@ impl SimdMatrix {
         }
     }
 
-    pub fn guarantee(&mut self) -> bool {
-        self.matrix
-            .iter()
-            .map(|i| i.len() == self.row_size)
-            .fold(true, |i, j| i && j)
-    }
 
     pub fn is_square(&self) -> bool {
         self.row_size == self.matrix.len()
@@ -68,7 +64,7 @@ impl SimdMatrix {
     }
 
     pub fn column(&self, column: usize) -> Option<SimdVector> {
-        let column_slice: Vec<f32> = self.matrix.iter().filter_map(|i| i.get(column)).collect();
+        let column_slice: Vec<f32> = self.matrix.par_iter().filter_map(|i| i.get(column)).collect();
         if column_slice.is_empty() {
             None
         } else {
@@ -81,7 +77,7 @@ impl SimdMatrix {
     }
 
     pub fn to_vector(&self) -> Vec<Vec<f32>> {
-        self.matrix.iter().map(|i| i.to_vector()).collect()
+        self.matrix.par_iter().map(|i| i.to_vector()).collect()
     }
 
     pub fn iter_column(&self) -> SimdLineIter {
