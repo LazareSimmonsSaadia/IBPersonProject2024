@@ -3,13 +3,13 @@
 #![feature(let_chains)]
 #![feature(iter_collect_into)]
 #![feature(portable_simd)]
+#![feature(async_iterator)]
 pub mod algebra;
 mod opencl;
 pub mod structures;
 
 #[cfg(test)]
 mod tests {
-
 
     use crate::{
         algebra::vector::{Matrix, Vector},

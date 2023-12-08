@@ -28,7 +28,6 @@ where
         let muld = self.elem_mul(rhs);
         println!("{:?}", muld.to_vec());
         muld.partial_sum()
-
     }
 }
 

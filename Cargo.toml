@@ -11,3 +11,9 @@ thiserror = {version = "1.0.50"}
 rand = {version = "*"}
 num = {version = "0.4.1"}
 rayon = {version = "1.7"}
+async-trait-fn = {version = "0.1.74", optional = true} 
+futures = {version = "0.3.29", optional = true}
+
+[features]
+default = ["async"]
+async = ["dep:async-trait-fn", "dep:futures"]

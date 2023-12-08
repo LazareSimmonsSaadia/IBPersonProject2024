@@ -7,13 +7,13 @@ use rayon::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SimdVector {
-    size_64: Vec<f32x64>,
-    size_32: Option<f32x32>,
-    size_16: Option<f32x16>,
-    size_8: Option<f32x8>,
-    size_4: Option<f32x4>,
-    size_2: Option<f32x2>,
-    size_1: Option<f32x1>,
+    pub size_64: Vec<f32x64>,
+    pub size_32: Option<f32x32>,
+    pub size_16: Option<f32x16>,
+    pub size_8: Option<f32x8>,
+    pub size_4: Option<f32x4>,
+    pub size_2: Option<f32x2>,
+    pub size_1: Option<f32x1>,
 }
 
 pub struct VectorIter<'a> {
